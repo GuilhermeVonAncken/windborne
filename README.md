@@ -1,53 +1,29 @@
 # Alphavantage Financial ETL + Streamlit Dashboard
 
-## Overview
+## Requirements
+- Python 3.10+
+- Docker & Docker Compose (optional)
+- Alpha Vantage API key (free tier)
 
-This repository contains a full end-to-end prototype to:
-- Fetch annual financial statements from Alpha Vantage for public companies
-- Normalize and store them in PostgreSQL
-- Compute a set of financial metrics and store them
-- Provide a Streamlit dashboard to explore metrics
-- Productionization guidance (n8n, scheduling, rate-limit strategies)
-
-The repo is intentionally simple and designed for local development and quick deployment.
-
-## Quick file map
-
-- `src/` - Python source code
-- `docs/prod_design.md` - Productionization notes, mermaid diagrams, n8n flow
-- `docker-compose.yml` - Postgres + Streamlit for local dev
-- `Dockerfile` - For building the app container
-- `requirements.txt` - Python deps
-- `.env.example` - example env vars
-- `README.md` - this file
-
-## Quick start (local)
-
-1. Copy `.env.example` to `.env` and set `ALPHAVANTAGE_KEY`.
-2. Start Postgres (recommended with docker-compose): `docker-compose up -d db`
-3. Install Python deps: `pip install -r requirements.txt`
-4. Run the loader to fetch data:
-   ```
+## Quick start (local python)
+1. pip install -r requirements.txt
+2. Set env vars:
    export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/finance_db
    export ALPHAVANTAGE_KEY=YOUR_KEY
+3. Start Postgres (docker recommended):
+   docker run --name finance-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=finance_db -p 5432:5432 -d postgres
+4. Run loader:
    python -m src.loader
-   ```
 5. Compute metrics:
-   ```
-   python -c "from src.metrics import compute_for_all_companies; compute_for_all_companies()"
-   ```
+   python -c "from src.metrics import compute_for_company; from src.models import SessionLocal; s=SessionLocal(); from src.models import Company; ids=[c.id for c in s.query(Company).all()]; [compute_for_company(i) for i in ids];"
 6. Start Streamlit:
-   ```
    streamlit run src/streamlit_app.py
-   ```
+
+## Docker Compose
+1. Create `.env` with ALPHAVANTAGE_KEY
+2. docker-compose up --build
+3. Streamlit available at http://localhost:8501
 
 ## Deployment
-
-- Streamlit Cloud / Render are both good options.
-- Use the `Dockerfile` + `docker-compose.yml` for a containerized deployment.
-
-## Notes
-
-- The project uses Alpha Vantage free tier limits (5 calls/min, 25 calls/day). For many tickers you must implement staggering or get a commercial data source.
-- This repo stores raw API responses in `.cache/` to avoid repeated calls during development.
-
+- Streamlit Cloud: push repo and set ALPHAVANTAGE_KEY secret; run streamlit_app.py
+- Render: create web service pointing to streamlit run command.
